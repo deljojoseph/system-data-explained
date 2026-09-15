@@ -4,7 +4,7 @@ A native, local-only macOS utility that explains storage commonly hidden behind 
 
 The source is public so people can inspect what the app reads, how findings are classified,
 and which capabilities are deliberately absent. The signed download is built and notarized
-by Deljo Joseph. See [Verify a release](RELEASE_VERIFICATION.md) before running a downloaded copy.
+by [Deljo Joseph](https://deljojoseph.com/). See [Verify a release](RELEASE_VERIFICATION.md) before running a downloaded copy.
 
 ## Safety model
 
