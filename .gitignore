@@ -1,0 +1,11 @@
+.build/
+.DS_Store
+.swiftpm/
+xcuserdata/
+*.p8
+*.p12
+*.pem
+*.key
+*.csr
+*.certSigningRequest
+Images/* copy.png
