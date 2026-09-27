@@ -115,10 +115,9 @@ public struct MacFileSystemReader: FileSystemReading, Sendable {
                 continue
             }
 
-            while let entryURL = enumerator.nextObject() as? URL {
-                if (filesObserved + directoriesObserved + symbolicLinksSkipped) % 256 == 0 {
-                    try Task.checkCancellation()
-                }
+            while true {
+                try Task.checkCancellation()
+                guard let entryURL = enumerator.nextObject() as? URL else { break }
 
                 do {
                     let values = try entryURL.resourceValues(forKeys: Set(keys))

@@ -45,6 +45,12 @@ public final class BuildReportUseCase: @unchecked Sendable {
         itemsByID[itemID] = item
     }
 
+    func partialLogicalBytes() -> Int64 {
+        lock.lock()
+        defer { lock.unlock() }
+        return itemsByID.values.reduce(0) { $0 + $1.logicalBytes }
+    }
+
     public func build(summary: ScanSummary, volume: VolumeSnapshot?) -> ExplanationReport {
         lock.lock()
         let snapshot = itemsByID

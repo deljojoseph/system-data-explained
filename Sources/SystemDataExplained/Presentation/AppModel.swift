@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
         currentArea: "Preparing"
     )
     @Published private(set) var scanStartedAt: Date?
+    @Published private(set) var isStopping = false
     @Published private(set) var report: ExplanationReport?
     @Published private(set) var errorMessage: String?
 
@@ -44,6 +45,7 @@ final class AppModel: ObservableObject {
         guard phase != .working else { return }
 
         errorMessage = nil
+        isStopping = false
         progress = ScanProgress(
             filesObserved: 0,
             directoriesObserved: 0,
@@ -73,12 +75,22 @@ final class AppModel: ObservableObject {
                 }
                 self.report = report
                 self.scanStartedAt = nil
+                self.isStopping = false
                 self.phase = .results
+            } catch let cancellation as ScanCancelledError {
+                self.scanStartedAt = nil
+                self.isStopping = false
+                if cancellation.partialReport.scan.summary.filesObserved > 0 {
+                    self.report = cancellation.partialReport
+                }
+                self.phase = self.report == nil ? .onboarding : .results
             } catch is CancellationError {
                 self.scanStartedAt = nil
+                self.isStopping = false
                 self.phase = self.report == nil ? .onboarding : .results
             } catch {
                 self.scanStartedAt = nil
+                self.isStopping = false
                 self.errorMessage = "The check could not finish. Nothing on your Mac was changed. \(error.localizedDescription)"
                 self.phase = .failed
             }
@@ -87,6 +99,8 @@ final class AppModel: ObservableObject {
     }
 
     func stopExplanation() {
+        guard phase == .working, !isStopping else { return }
+        isStopping = true
         workTask?.cancel()
     }
 

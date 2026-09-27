@@ -1,4 +1,34 @@
+import Foundation
 import SDEDomain
+
+public struct ScanCancelledError: Error, Sendable {
+    public let partialReport: ExplanationReport
+
+    public init(partialReport: ExplanationReport) {
+        self.partialReport = partialReport
+    }
+}
+
+private final class ProgressSnapshot: @unchecked Sendable {
+    private let lock = NSLock()
+    private var progress: ScanProgress
+
+    init(_ progress: ScanProgress) {
+        self.progress = progress
+    }
+
+    func update(_ progress: ScanProgress) {
+        lock.lock()
+        self.progress = progress
+        lock.unlock()
+    }
+
+    var value: ScanProgress {
+        lock.lock()
+        defer { lock.unlock() }
+        return progress
+    }
+}
 
 public struct ScanStorageUseCase: Sendable {
     private let fileSystem: any FileSystemReading
@@ -28,31 +58,64 @@ public struct ScanStorageUseCase: Sendable {
         )
 
         let reportBuilder = BuildReportUseCase()
-        let summary = try await fileSystem.scan(
-            normalizedRequest,
-            onObservation: { observation in
-                let classification = explainer.execute(observation)
-                reportBuilder.observe(observation, as: classification)
-            },
-            onProgress: onProgress
+        let initialProgress = ScanProgress(
+            filesObserved: 0,
+            directoriesObserved: 0,
+            measuredBytes: 0,
+            currentArea: "Preparing"
         )
+        let progressSnapshot = ProgressSnapshot(initialProgress)
+        let startedAt = Date()
 
-        let volume = await volumeReader.snapshot(forPath: normalizedRequest.roots.first?.path ?? "/")
-        let initialReport = reportBuilder.build(summary: summary, volume: volume)
-        guard let simulatorReader else { return initialReport }
-        let worker = Task.detached(priority: .userInitiated) {
-            var report = initialReport
-            for category in report.categories.indices {
-                for index in report.categories[category].items.indices {
-                    try Task.checkCancellation()
-                    let item = report.categories[category].items[index]
-                    guard item.classification.guidance?.kind == .simulatorDevice,
-                          let location = item.location else { continue }
-                    report.categories[category].items[index].simulator = simulatorReader.read(location)
+        do {
+            let summary = try await fileSystem.scan(
+                normalizedRequest,
+                onObservation: { observation in
+                    let classification = explainer.execute(observation)
+                    reportBuilder.observe(observation, as: classification)
+                },
+                onProgress: { progress in
+                    progressSnapshot.update(progress)
+                    onProgress(progress)
                 }
+            )
+
+            let volume = await volumeReader.snapshot(forPath: normalizedRequest.roots.first?.path ?? "/")
+            let initialReport = reportBuilder.build(summary: summary, volume: volume)
+            guard let simulatorReader else { return initialReport }
+            let worker = Task.detached(priority: .userInitiated) {
+                var report = initialReport
+                for category in report.categories.indices {
+                    for index in report.categories[category].items.indices {
+                        try Task.checkCancellation()
+                        let item = report.categories[category].items[index]
+                        guard item.classification.guidance?.kind == .simulatorDevice,
+                              let location = item.location else { continue }
+                        report.categories[category].items[index].simulator = simulatorReader.read(location)
+                    }
+                }
+                return report
             }
-            return report
+            return try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+        } catch is CancellationError {
+            let progress = progressSnapshot.value
+            let issue = ScanIssue(
+                kind: .cancelled,
+                path: progress.currentArea,
+                message: "The check was stopped before every selected location was examined."
+            )
+            let summary = ScanSummary(
+                roots: normalizedRequest.roots,
+                filesObserved: progress.filesObserved,
+                directoriesObserved: progress.directoriesObserved,
+                symbolicLinksSkipped: 0,
+                measuredBytes: progress.measuredBytes,
+                logicalBytes: reportBuilder.partialLogicalBytes(),
+                issues: [issue],
+                duration: Date().timeIntervalSince(startedAt)
+            )
+            let volume = await volumeReader.snapshot(forPath: normalizedRequest.roots.first?.path ?? "/")
+            throw ScanCancelledError(partialReport: reportBuilder.build(summary: summary, volume: volume))
         }
-        return try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
     }
 }

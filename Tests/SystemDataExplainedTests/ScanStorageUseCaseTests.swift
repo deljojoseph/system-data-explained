@@ -27,6 +27,26 @@ final class ScanStorageUseCaseTests: XCTestCase {
         XCTAssertTrue(report.isPartial)
         XCTAssertEqual(report.scan.summary.issues, [issue])
     }
+
+    func testCancellationReturnsPartialReport() async throws {
+        let reader = CancellingReader()
+        let useCase = ScanStorageUseCase(
+            fileSystem: reader,
+            volumeReader: FixtureVolumeReader(),
+            classifier: FixtureClassifier()
+        )
+
+        do {
+            _ = try await useCase.execute(ScanRequest(roots: [
+                ScanRoot(path: "/fixture", displayName: "Fixture")
+            ]))
+            XCTFail("A cancelled scan should throw ScanCancelledError")
+        } catch let error as ScanCancelledError {
+            XCTAssertEqual(error.partialReport.scan.measuredBytes, 4_096)
+            XCTAssertTrue(error.partialReport.isPartial)
+            XCTAssertEqual(error.partialReport.scan.summary.issueCounts[.cancelled], 1)
+        }
+    }
 }
 
 private struct FixtureReader: FileSystemReading {
@@ -67,6 +87,30 @@ private struct FixtureReader: FileSystemReading {
 private struct FixtureVolumeReader: VolumeReading {
     func snapshot(forPath path: String) async -> VolumeSnapshot? {
         VolumeSnapshot(totalBytes: 1_000_000, freeBytes: 500_000)
+    }
+}
+
+private struct CancellingReader: FileSystemReading {
+    func scan(
+        _ request: ScanRequest,
+        onObservation: @escaping @Sendable (StorageObservation) -> Void,
+        onProgress: @escaping @Sendable (ScanProgress) -> Void
+    ) async throws -> ScanSummary {
+        let observation = StorageObservation(
+            path: "/fixture/known.data",
+            rootPath: "/fixture",
+            logicalBytes: 4_096,
+            allocatedBytes: 4_096,
+            kind: .file
+        )
+        onObservation(observation)
+        onProgress(ScanProgress(
+            filesObserved: 1,
+            directoriesObserved: 0,
+            measuredBytes: 4_096,
+            currentArea: "Fixture"
+        ))
+        throw CancellationError()
     }
 }
 

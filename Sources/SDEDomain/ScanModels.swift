@@ -30,6 +30,7 @@ public enum ScanIssueKind: String, Codable, Hashable, Sendable {
     case transientFileChange
     case volumeBoundarySkipped
     case metadataUnavailable
+    case cancelled
 }
 
 public struct ScanIssue: Codable, Hashable, Sendable, Identifiable {

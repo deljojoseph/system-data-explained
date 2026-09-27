@@ -55,8 +55,10 @@ final class PresentationTests: XCTestCase {
         model.startExplanation()
         XCTAssertEqual(model.phase, .working)
         model.stopExplanation()
+        XCTAssertTrue(model.isStopping)
         for _ in 0..<100 { if model.phase != .working { break }; await Task.yield() }
         XCTAssertEqual(model.phase, .results)
+        XCTAssertFalse(model.isStopping)
         XCTAssertEqual(model.report, report)
     }
 

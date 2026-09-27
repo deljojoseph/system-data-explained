@@ -20,6 +20,7 @@ struct CockpitView: View {
                     phase: model.phase,
                     checkAgain: model.startExplanation,
                     stop: model.stopExplanation,
+                    isStopping: model.isStopping,
                     readingScale: $readingScale
                 )
 
@@ -75,6 +76,7 @@ private struct CockpitHeader: View {
     let phase: AppModel.Phase
     let checkAgain: () -> Void
     let stop: () -> Void
+    let isStopping: Bool
     @Binding var readingScale: Double
 
     var body: some View {
@@ -119,11 +121,12 @@ private struct CockpitHeader: View {
                 .modifier(SecondaryGlassButton())
             } else if phase == .working {
                 Button(action: stop) {
-                    Label("Stop", systemImage: "stop.fill")
+                    Label(isStopping ? "Stopping safely…" : "Stop", systemImage: isStopping ? "hourglass" : "stop.fill")
                         .sdeFont(13, weight: .regular)
-                        .frame(minWidth: 128, minHeight: 44)
+                        .frame(minWidth: 160, minHeight: 44)
                 }
                 .modifier(SecondaryGlassButton())
+                .disabled(isStopping)
             }
         }
         .padding(.horizontal, 20)
@@ -328,7 +331,9 @@ private struct ResultsState: View {
                     .padding(.bottom, 12)
 
                 if report.isPartial {
-                    Text("Some storage couldn’t be checked. Sizes may be incomplete.")
+                    Text(report.scan.summary.issueCounts[.cancelled, default: 0] > 0
+                         ? "The check stopped early. These are the findings collected so far."
+                         : "Some storage couldn’t be checked. Sizes may be incomplete.")
                         .sdeFont(13)
                         .foregroundStyle(Color.sdeMuted)
                         .padding(.bottom, 10)
@@ -745,7 +750,9 @@ private struct VisibilityDisclosure: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("This covers the locations checked, not every file on your Mac or Apple’s exact System Data total.")
                 if report.isPartial {
-                    Text("Some sizes may be incomplete. You can keep these results and check again after changing access.")
+                    Text(report.scan.summary.issueCounts[.cancelled, default: 0] > 0
+                         ? "These are partial findings from the locations reached before you stopped the check. You can run it again to check everything."
+                         : "Some sizes may be incomplete. You can keep these results and check again after changing access.")
                     ForEach(report.scan.summary.issueCounts.keys.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { kind in
                         LabeledContent(issueTitle(kind), value: report.scan.summary.issueCounts[kind, default: 0].formatted())
                     }
@@ -777,6 +784,7 @@ private struct VisibilityDisclosure: View {
         case .transientFileChange: "Items changed during checking"
         case .volumeBoundarySkipped: "Other disks not included"
         case .metadataUnavailable: "Details unavailable"
+        case .cancelled: "Check stopped early"
         }
     }
 }
