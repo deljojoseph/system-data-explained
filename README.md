@@ -32,7 +32,7 @@ of receiving a confident removal recommendation.
 3. Press Run.
 4. Select **Explain My System Data**.
 
-The first scan may take several minutes on a large Mac. It remains cancellable. macOS may deny access to protected locations; that is expected and the report will remain explicit about partial visibility. Do not grant Full Disk Access for the first safety test.
+The first scan may take several minutes on a large Mac. While it runs, the app shows the current scan area, files and folders checked, and elapsed time. It remains cancellable. macOS may deny access to protected locations; that is expected and the report will remain explicit about partial visibility. Do not grant Full Disk Access for the first safety test.
 
 ## Run from Terminal
 

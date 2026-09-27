@@ -31,7 +31,7 @@ struct CockpitView: View {
                                 .padding(.vertical, 22)
                         }
                     case .working:
-                        WorkingState(progress: model.progress)
+                        WorkingState(progress: model.progress, startedAt: model.scanStartedAt ?? Date())
                     case .results:
                         if let report = model.report {
                             ResultsState(
@@ -175,6 +175,11 @@ struct OpeningState: View {
                 .sdeFont(13, weight: .regular)
                 .foregroundStyle(Color.sdeMuted)
                 .fixedSize(horizontal: false, vertical: true)
+
+            Text("The first check may take several minutes on a larger Mac. Nothing is changed while it runs.")
+                .sdeFont(13, weight: .regular)
+                .foregroundStyle(Color.sdeMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -243,35 +248,68 @@ struct SystemDataSample: View {
 
 struct WorkingState: View {
     let progress: ScanProgress
+    let startedAt: Date
+
+    init(progress: ScanProgress, startedAt: Date = Date()) {
+        self.progress = progress
+        self.startedAt = startedAt
+    }
 
     var body: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(Color.sdeBlue.opacity(0.08))
-                    .frame(width: 96, height: 96)
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.sdeBlue)
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(Color.sdeBlue.opacity(0.08))
+                        .frame(width: 96, height: 96)
+                    ProgressView()
+                        .controlSize(.large)
+                        .tint(.sdeBlue)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Finding the answer…")
+                        .sdeFont(22, weight: .medium)
+                        .foregroundStyle(Color.sdeInk)
+                    Text("\(ByteFormatting.string(progress.measuredBytes)) found so far")
+                        .sdeFont(17, weight: .regular).monospacedDigit()
+                        .foregroundStyle(Color.sdeBlue)
+                }
+
+                VStack(spacing: 6) {
+                    Text("Checking \(progress.currentArea)")
+                        .sdeFont(14, weight: .medium)
+                        .foregroundStyle(Color.sdeInk)
+
+                    Text("\(progress.filesObserved.formatted()) files · \(progress.directoriesObserved.formatted()) folders checked · \(elapsedTime(at: context.date))")
+                        .sdeFont(13)
+                        .foregroundStyle(Color.sdeMuted)
+                        .monospacedDigit()
+                }
+
+                VStack(spacing: 6) {
+                    Text("The first check can take several minutes on a larger Mac. It is still working even if this number pauses briefly.")
+                        .sdeFont(13)
+                        .foregroundStyle(Color.sdeMuted)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 580)
+
+                    Text("macOS may ask for access to some folders. You may decline. Those locations may be missing from the results.")
+                        .sdeFont(13)
+                        .foregroundStyle(Color.sdeMuted)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 580)
+                }
             }
-
-            VStack(spacing: 8) {
-                Text("Finding the answer…")
-                    .sdeFont(22, weight: .medium)
-                    .foregroundStyle(Color.sdeInk)
-                Text("\(ByteFormatting.string(progress.measuredBytes)) found so far")
-                    .sdeFont(17, weight: .regular).monospacedDigit()
-                    .foregroundStyle(Color.sdeBlue)
-            }
-
-            Text("macOS may ask for access to some folders. You may decline. Those locations may be missing from the results.")
-                .sdeFont(13)
-                .foregroundStyle(Color.sdeMuted)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 580)
-
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func elapsedTime(at date: Date) -> String {
+        let elapsed = max(0, Int(date.timeIntervalSince(startedAt)))
+        let minutes = elapsed / 60
+        let seconds = elapsed % 60
+        return minutes == 0 ? "\(seconds)s elapsed" : String(format: "%dm %02ds elapsed", minutes, seconds)
     }
 }
 

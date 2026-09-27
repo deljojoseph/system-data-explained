@@ -18,6 +18,7 @@ final class AppModel: ObservableObject {
         measuredBytes: 0,
         currentArea: "Preparing"
     )
+    @Published private(set) var scanStartedAt: Date?
     @Published private(set) var report: ExplanationReport?
     @Published private(set) var errorMessage: String?
 
@@ -57,6 +58,7 @@ final class AppModel: ObservableObject {
         }
 
         phase = .working
+        scanStartedAt = Date()
         workTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -65,12 +67,18 @@ final class AppModel: ObservableObject {
                         self?.progress = progress
                     }
                 }
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else {
+                    self.scanStartedAt = nil
+                    return
+                }
                 self.report = report
+                self.scanStartedAt = nil
                 self.phase = .results
             } catch is CancellationError {
+                self.scanStartedAt = nil
                 self.phase = self.report == nil ? .onboarding : .results
             } catch {
+                self.scanStartedAt = nil
                 self.errorMessage = "The check could not finish. Nothing on your Mac was changed. \(error.localizedDescription)"
                 self.phase = .failed
             }
