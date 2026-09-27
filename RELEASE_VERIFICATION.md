@@ -9,21 +9,21 @@ The public source and the distributed Mac app serve different trust checks:
 
 ## Current release
 
-- Version: `1.0 (6)`
-- Source revision: tag `v1.0.6`
-- ZIP: `System-Data-Explained-1.0-6.zip`
-- SHA-256: `2b9cb8bcdb962c402691b97300b82e87812490b587612c5e3f292465b1a2b27e`
-- Notarization submission: `84eb63ec-7a27-4ae1-a76e-c97e5fd0e09f`
-- Download: `https://deljojoseph.com/downloads/System-Data-Explained-1.0-6.zip`
+- Version: `1.0 (7)`
+- Source revision: the release commit containing this document
+- ZIP: `System-Data-Explained-1.0-7.zip`
+- SHA-256: `50c41f5f3526226c07c62ae5f7b764aec57aea8d71ee3c87e45c3f6b375ce5cd`
+- Notarization submission: `9211c505-1e21-416b-b450-ac09e5650a85`
+- Download: `https://deljojoseph.com/downloads/System-Data-Explained-1.0-7.zip`
 
-The app sources, resources, bundle information, and local build script for version 1.0 (6) are
+The app sources, resources, bundle information, and local build script for version 1.0 (7) are
 present at the source revision above. Apple signing and notarization add timestamps and tickets,
 so a locally built ZIP is not expected to be byte-for-byte identical to the published ZIP.
 
 ## Check the downloaded ZIP
 
 ```sh
-shasum -a 256 System-Data-Explained-1.0-6.zip
+shasum -a 256 System-Data-Explained-1.0-7.zip
 ```
 
 The output must match the published SHA-256 value exactly. If it does not, do not open the app.

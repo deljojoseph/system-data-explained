@@ -118,14 +118,14 @@ private struct CockpitHeader: View {
                         .sdeFont(13, weight: .regular)
                         .frame(minWidth: 128, minHeight: 44)
                 }
-                .modifier(SecondaryGlassButton())
+                .modifier(NativeActionButton())
             } else if phase == .working {
                 Button(action: stop) {
                     Label(isStopping ? "Stopping safely…" : "Stop", systemImage: isStopping ? "hourglass" : "stop.fill")
                         .sdeFont(13, weight: .regular)
                         .frame(minWidth: 160, minHeight: 44)
                 }
-                .modifier(SecondaryGlassButton())
+                .modifier(NativeActionButton())
                 .disabled(isStopping)
             }
         }
@@ -164,10 +164,10 @@ struct OpeningState: View {
             Button(action: begin) {
                 Text("Explain My System Data")
                     .sdeFont(14, weight: .medium)
-                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .frame(minHeight: 48)
                     .padding(.horizontal, 18)
             }
-            .modifier(PrimaryGlassButton())
+            .modifier(NativeActionButton())
             .accessibilityHint("Finds and explains hidden storage without changing your files")
 
             Label("Private · Read-only · Stays on this Mac", systemImage: "lock.shield.fill")
@@ -423,7 +423,7 @@ private struct DevelopmentSupportInvitation: View {
             }
             .sdeFont(13, weight: .regular)
             .frame(minWidth: 154, minHeight: 44)
-            .modifier(SecondaryGlassButton())
+            .modifier(NativeActionButton())
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
@@ -657,7 +657,7 @@ struct InlineItemDetail: View {
                                     .padding(.horizontal, 12)
                                     .frame(minHeight: 48)
                             }
-                            .modifier(SecondaryGlassButton())
+                            .modifier(NativeActionButton())
                             .accessibilityHint("Selects " + item.title + ". Does not delete it.")
                         } else {
                             Text("Location could not be verified. Check again before opening it.")
@@ -811,11 +811,11 @@ private struct FailureState: View {
                 Button("Back", action: goBack)
                     .sdeFont(13, weight: .regular)
                     .frame(minWidth: 120, minHeight: 48)
-                    .modifier(SecondaryGlassButton())
+                    .modifier(NativeActionButton())
                 Button("Try Again", action: tryAgain)
                     .sdeFont(13, weight: .regular)
                     .frame(minWidth: 160, minHeight: 48)
-                    .modifier(PrimaryGlassButton())
+                    .modifier(NativeActionButton())
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -865,36 +865,15 @@ private struct SubtleLine: View {
     }
 }
 
-private struct PrimaryGlassButton: ViewModifier {
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .tint(.sdeBlue)
-        } else {
-            content
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .tint(.sdeBlue)
-        }
-    }
-}
-
-private struct SecondaryGlassButton: ViewModifier {
+private struct NativeActionButton: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
             content
                 .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
-                .tint(.sdeBlue)
         } else {
             content
                 .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .tint(.sdeBlue)
         }
     }
 }
